@@ -24,8 +24,9 @@
         }
         
         @keyframes btn-pulse-glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.2); transform: scale(1); }
-            50% { box-shadow: 0 0 40px rgba(255,255,255,0.5); transform: scale(1.03); }
+            /* Adjusted shadow for light theme (darker shadow) */
+            0%, 100% { box-shadow: 0 0 20px rgba(0,0,0,0.1); transform: scale(1); }
+            50% { box-shadow: 0 0 40px rgba(0,0,0,0.2); transform: scale(1.03); }
         }
 
         @keyframes check-draw {
@@ -83,11 +84,11 @@
         .leaflet-control-container { display: none; }
     </style>
 </head>
-<body class="bg-zinc-950 text-white font-sans selection:bg-white/20 h-[100dvh] w-full overflow-hidden relative">
+<body class="bg-zinc-50 text-zinc-900 font-sans selection:bg-blue-500/20 h-[100dvh] w-full overflow-hidden relative">
 
-    <div id="bg-gradient" class="fixed inset-0 bg-gradient-to-b opacity-40 transition-colors duration-1000 pointer-events-none from-blue-600/20 to-purple-600/20"></div>
-    <div class="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none mix-blend-overlay"></div>
-    <div class="fixed inset-0 bg-zinc-950/20 pointer-events-none z-0"></div>
+    <div id="bg-gradient" class="fixed inset-0 bg-gradient-to-b opacity-30 transition-colors duration-1000 pointer-events-none from-blue-400/10 to-purple-400/10"></div>
+    <!-- Removed dark textures and overlays for cleaner light theme -->
+    <div class="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none mix-blend-multiply"></div>
 
     <!-- ================= VIEW 1: GAME ================= -->
     <div id="view-game" class="view-section view-active flex flex-col items-center justify-between p-6 max-w-lg mx-auto h-[100dvh]">
@@ -96,20 +97,17 @@
 
         <!-- TOP: Status -->
         <div class="w-full flex flex-col items-center space-y-3 pt-safe relative z-10">
-            <div class="flex justify-between w-full text-[10px] sm:text-xs font-bold tracking-[0.2em] text-zinc-500 uppercase">
+            <div class="flex justify-between w-full text-[10px] sm:text-xs font-bold tracking-[0.2em] text-zinc-400 uppercase">
                 <span id="gen-label">Gen 1</span>
-                <!-- Percentage moved inside bar for better visibility -->
             </div>
             
-            <!-- Bigger, More Visible Progress Bar -->
-            <div class="w-full h-7 bg-zinc-800/80 rounded-xl overflow-hidden backdrop-blur-md border border-white/20 shadow-lg relative">
+            <!-- Light Theme Progress Bar -->
+            <div class="w-full h-7 bg-white rounded-xl overflow-hidden backdrop-blur-md border border-zinc-200 shadow-sm relative">
                 <div id="progress-bar" class="h-full bg-blue-500 shadow-[0_0_20px_currentColor] transition-all duration-300 ease-out flex items-center justify-end pr-2" style="width: 0%">
                 </div>
                  <!-- Centered Text Overlay -->
-                 <span id="percent-label" class="absolute inset-0 flex items-center justify-center text-xs font-bold tracking-widest text-white drop-shadow-md z-10">0% SYNCED</span>
+                 <span id="percent-label" class="absolute inset-0 flex items-center justify-center text-xs font-bold tracking-widest text-zinc-800 drop-shadow-sm z-10">0% SYNCED</span>
             </div>
-            
-            <!-- TITLE REMOVED HERE -->
         </div>
 
         <!-- MIDDLE: Phone Hero -->
@@ -126,78 +124,80 @@
         <div class="w-full flex flex-col items-center gap-12 pb-safe z-30">
             
             <div id="click-area" class="relative group transition-all duration-300 mt-4">
-                <div id="click-ripple" class="absolute inset-0 rounded-full border border-white/40 hidden pointer-events-none"></div>
-                <button id="apple-btn" class="relative z-20 w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-full backdrop-blur-xl border border-white/10 transition-all duration-150 active:scale-95 shadow-[0_0_60px_-10px_rgba(255,255,255,0.05)] outline-none touch-manipulation overflow-hidden">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Tap" class="h-10 w-auto object-contain invert opacity-90 pointer-events-none select-none">
+                <div id="click-ripple" class="absolute inset-0 rounded-full border border-zinc-300 hidden pointer-events-none"></div>
+                <!-- Light Theme Button: White background, gray borders, standard logo -->
+                <button id="apple-btn" class="relative z-20 w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center bg-white shadow-lg border border-zinc-100 rounded-full transition-all duration-150 active:scale-95 outline-none touch-manipulation overflow-hidden">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Tap" class="h-10 w-auto object-contain opacity-90 pointer-events-none select-none">
                 </button>
             </div>
 
-            <button id="collect-btn" class="w-full py-4 px-6 rounded-2xl font-bold text-sm tracking-[0.15em] uppercase transition-all duration-500 flex items-center justify-center gap-3 bg-zinc-900/80 backdrop-blur-md text-zinc-300 border border-zinc-800 hover:bg-white hover:text-black hover:scale-[1.02] shadow-lg hover:shadow-white/20 group overflow-hidden relative">
+            <!-- Light Theme Collect Button: White bg, dark text -->
+            <button id="collect-btn" class="w-full py-4 px-6 rounded-2xl font-bold text-sm tracking-[0.15em] uppercase transition-all duration-500 flex items-center justify-center gap-3 bg-white text-zinc-800 border border-zinc-200 hover:bg-zinc-50 shadow-sm hover:shadow-md group overflow-hidden relative">
                 <span class="relative z-10 flex items-center gap-2">
                     <span>Collect Now</span>
                     <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </span>
-                <div id="collect-shine" class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                <div id="collect-shine" class="absolute inset-0 bg-gradient-to-r from-transparent via-zinc-200/50 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
             </button>
         </div>
     </div>
 
     <!-- ================= VIEW 2: SHIPPING FORM ================= -->
-    <div id="view-form" class="view-section view-hidden bg-zinc-950 flex flex-col h-[100dvh]">
-        <div class="px-6 py-6 flex items-center justify-between bg-zinc-900/50 backdrop-blur-xl border-b border-white/5 z-20">
-            <button id="back-btn" class="text-zinc-400 hover:text-white transition-colors flex items-center gap-2 text-sm font-medium">
+    <div id="view-form" class="view-section view-hidden bg-zinc-50 flex flex-col h-[100dvh]">
+        <div class="px-6 py-6 flex items-center justify-between bg-white/80 backdrop-blur-xl border-b border-zinc-200 z-20">
+            <button id="back-btn" class="text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-2 text-sm font-medium">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 Back
             </button>
-            <span class="text-sm font-bold tracking-widest uppercase text-white/80">Details</span>
+            <span class="text-sm font-bold tracking-widest uppercase text-zinc-400">Details</span>
             <div class="w-16"></div>
         </div>
 
         <div class="flex-1 overflow-y-auto p-6 space-y-8 max-w-lg mx-auto w-full relative z-10">
             <div class="space-y-2 text-center animate-appear">
-                <h2 class="text-2xl font-bold text-white">Where should we send it?</h2>
+                <h2 class="text-2xl font-bold text-zinc-900">Where should we send it?</h2>
                 <p class="text-zinc-500 text-sm">Enter your details to claim your device.</p>
             </div>
             <div class="space-y-2 animate-appear" style="animation-delay: 0.1s">
-                <label class="text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">Full Name</label>
-                <!-- Changed text-sm to text-base to prevent iOS zoom on focus -->
-                <input type="text" id="input-name" placeholder="John Appleseed" class="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-base font-medium">
+                <label class="text-xs font-bold uppercase tracking-widest text-zinc-400 ml-1">Full Name</label>
+                <!-- Light theme input -->
+                <input type="text" id="input-name" placeholder="John Appleseed" class="w-full bg-white border border-zinc-200 rounded-2xl p-4 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-base font-medium shadow-sm">
             </div>
             <div class="space-y-2 animate-appear" style="animation-delay: 0.2s">
-                <label class="text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">Delivery Location</label>
-                <p class="text-[10px] text-zinc-600 ml-1 mb-2">Tap the map to place a pin.</p>
-                <div id="map-container" class="w-full h-64 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden relative group hover:border-zinc-700 transition-colors"></div>
+                <label class="text-xs font-bold uppercase tracking-widest text-zinc-400 ml-1">Delivery Location</label>
+                <p class="text-[10px] text-zinc-500 ml-1 mb-2">Tap the map to place a pin.</p>
+                <div id="map-container" class="w-full h-64 bg-zinc-100 rounded-2xl border border-zinc-200 overflow-hidden relative group hover:border-zinc-300 transition-colors shadow-inner"></div>
             </div>
-            <button id="confirm-order-btn" class="w-full py-5 rounded-2xl font-bold text-sm tracking-widest uppercase bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_30px_rgba(37,99,235,0.3)] transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed animate-appear" style="animation-delay: 0.3s">
+            <button id="confirm-order-btn" class="w-full py-5 rounded-2xl font-bold text-sm tracking-widest uppercase bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/30 transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed animate-appear" style="animation-delay: 0.3s">
                 Confirm Delivery
             </button>
         </div>
     </div>
 
     <!-- ================= VIEW 3: SUCCESS ================= -->
-    <div id="view-success" class="view-section view-hidden flex flex-col items-center justify-center p-6 bg-zinc-950 z-50">
+    <div id="view-success" class="view-section view-hidden flex flex-col items-center justify-center p-6 bg-zinc-50 z-50">
         <canvas id="fireworks" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
         <div class="relative z-10 flex flex-col items-center text-center space-y-8 max-w-sm">
             <div class="relative">
                 <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-green-500 to-emerald-400 blur-2xl absolute inset-0 opacity-40 animate-pulse"></div>
-                <div class="w-24 h-24 rounded-full bg-zinc-900 border border-green-500/30 flex items-center justify-center relative shadow-2xl">
+                <div class="w-24 h-24 rounded-full bg-white border border-green-500/30 flex items-center justify-center relative shadow-xl">
                     <svg class="w-10 h-10 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <polyline class="check-path" points="20 6 9 17 4 12"></polyline>
                     </svg>
                 </div>
             </div>
             <div class="space-y-2">
-                <h2 class="text-3xl font-black text-white tracking-tight">Order Confirmed</h2>
-                <p class="text-zinc-400 text-sm">Your <span id="final-device-name" class="text-green-400 font-bold">iPhone</span> is reserved.</p>
+                <h2 class="text-3xl font-black text-zinc-900 tracking-tight">Order Confirmed</h2>
+                <p class="text-zinc-500 text-sm">Your <span id="final-device-name" class="text-green-600 font-bold">iPhone</span> is reserved.</p>
             </div>
-            <div class="w-full bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-2xl p-6 space-y-2">
-                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Delivery Estimate</p>
-                <div id="countdown" class="text-4xl font-mono font-bold text-white tabular-nums tracking-tighter">
+            <div class="w-full bg-white/80 backdrop-blur border border-zinc-200 rounded-2xl p-6 space-y-2 shadow-sm">
+                <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">Delivery Estimate</p>
+                <div id="countdown" class="text-4xl font-mono font-bold text-zinc-900 tabular-nums tracking-tighter">
                     02:00:00
                 </div>
-                <p class="text-xs text-zinc-600">Our courier is en route to the pin location.</p>
+                <p class="text-xs text-zinc-500">Our courier is en route to the pin location.</p>
             </div>
-            <button id="play-again-btn" class="text-zinc-500 hover:text-white text-xs uppercase tracking-widest mt-8 transition-colors">
+            <button id="play-again-btn" class="text-zinc-400 hover:text-zinc-900 text-xs uppercase tracking-widest mt-8 transition-colors">
                 Play Again
             </button>
         </div>
@@ -208,26 +208,26 @@
             {
                 name: "iPhone 17 Air",
                 img: "https://i.ibb.co/27TwCXLY/17-air-black.png",
-                gradient: "from-blue-600/20 to-cyan-500/20",
-                glowColor: "rgba(59, 130, 246, 0.4)",
+                gradient: "from-blue-400/10 to-cyan-400/10",
+                glowColor: "rgba(59, 130, 246, 0.3)",
                 bar: "bg-blue-500",
-                particle: "text-blue-400"
+                particle: "text-blue-500"
             },
             {
                 name: "iPhone 17 Pro",
                 img: "https://i.ibb.co/xKWg0R27/17pro-Sage-1.png",
-                gradient: "from-emerald-600/20 to-teal-600/20",
-                glowColor: "rgba(16, 185, 129, 0.4)",
+                gradient: "from-emerald-400/10 to-teal-400/10",
+                glowColor: "rgba(16, 185, 129, 0.3)",
                 bar: "bg-emerald-500",
-                particle: "text-emerald-400"
+                particle: "text-emerald-500"
             },
             {
                 name: "iPhone 17 Pro Max",
                 img: "https://i.ibb.co/0y4ZVXQD/17pro-Max-Cosmic-Orange-1.png",
-                gradient: "from-orange-600/20 to-amber-600/20",
-                glowColor: "rgba(249, 115, 22, 0.4)",
+                gradient: "from-orange-400/10 to-amber-400/10",
+                glowColor: "rgba(249, 115, 22, 0.3)",
                 bar: "bg-orange-500",
-                particle: "text-orange-400"
+                particle: "text-orange-500"
             }
         ];
 
@@ -254,7 +254,6 @@
                 gen: document.getElementById('gen-label'),
                 percent: document.getElementById('percent-label'),
                 bar: document.getElementById('progress-bar'),
-                // Name element removed
                 img: document.getElementById('phone-img'),
                 glow: document.getElementById('phone-glow'),
                 bg: document.getElementById('bg-gradient'),
@@ -291,7 +290,8 @@
 
         function initMap() {
             map = L.map('map-container').setView([34.0522, -118.2437], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            // Light tiles for light theme
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; OpenStreetMap &copy; CARTO',
                 subdomains: 'abcd',
                 maxZoom: 19
@@ -362,7 +362,8 @@
                 if (isLogo) {
                     shape.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.68-.83 1.14-1.99 1.01-3.15-1.05.05-2.32.7-3.07 1.57-.65.76-1.22 1.98-1.06 3.11 1.17.09 2.37-.59 3.12-1.53z"/></svg>`;
                 } else {
-                    shape.innerHTML = `<div class="w-3 h-3 rounded-full bg-white shadow-[0_0_10px_currentColor]"></div>`;
+                    // Use bg-current to match phone color (instead of white) for light theme visibility
+                    shape.innerHTML = `<div class="w-3 h-3 rounded-full bg-current shadow-[0_0_10px_currentColor]"></div>`;
                 }
 
                 inner.appendChild(shape);
@@ -449,8 +450,11 @@
             DOM.game.tapArea.style.marginTop = '0';
             DOM.game.tapArea.style.overflow = 'hidden';
 
-            DOM.game.collectBtn.classList.remove('bg-zinc-900/80', 'text-zinc-300', 'border-zinc-800');
-            DOM.game.collectBtn.classList.add('bg-white', 'text-black', 'animate-btn-pulse', 'border-transparent', 'shadow-[0_0_40px_rgba(255,255,255,0.3)]');
+            // Remove previous light theme classes
+            DOM.game.collectBtn.classList.remove('bg-white', 'text-zinc-800', 'border-zinc-200', 'hover:bg-zinc-50');
+            
+            // Add Dark "Hero" Styles for Contrast
+            DOM.game.collectBtn.classList.add('bg-zinc-900', 'text-white', 'animate-btn-pulse', 'border-transparent', 'shadow-[0_0_40px_rgba(0,0,0,0.2)]');
             
             // Changed "CLAIM" to "TAKE"
             DOM.game.collectBtn.innerHTML = `
@@ -458,7 +462,7 @@
                     <span>TAKE IPHONE 17 PRO MAX</span>
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </span>
-                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-zinc-400/40 to-transparent -translate-x-full animate-[shimmer_2s_infinite] pointer-events-none"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite] pointer-events-none"></div>
             `;
             
             DOM.game.gen.textContent = "MAX LEVEL";
@@ -536,13 +540,14 @@
             DOM.game.tapArea.classList.remove('opacity-50', 'pointer-events-none');
 
             // 4. Reset Collect Button (Revert Max Mode styles)
-            DOM.game.collectBtn.className = "w-full py-4 px-6 rounded-2xl font-bold text-sm tracking-[0.15em] uppercase transition-all duration-500 flex items-center justify-center gap-3 bg-zinc-900/80 backdrop-blur-md text-zinc-300 border border-zinc-800 hover:bg-white hover:text-black hover:scale-[1.02] shadow-lg hover:shadow-white/20 group overflow-hidden relative";
+            // Restore Light Theme Defaults
+            DOM.game.collectBtn.className = "w-full py-4 px-6 rounded-2xl font-bold text-sm tracking-[0.15em] uppercase transition-all duration-500 flex items-center justify-center gap-3 bg-white text-zinc-800 border border-zinc-200 hover:bg-zinc-50 shadow-sm hover:shadow-md group overflow-hidden relative";
             DOM.game.collectBtn.innerHTML = `
                 <span class="relative z-10 flex items-center gap-2">
                     <span>Collect Now</span>
                     <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </span>
-                <div id="collect-shine" class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                <div id="collect-shine" class="absolute inset-0 bg-gradient-to-r from-transparent via-zinc-200/50 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
             `;
 
             // 5. Reset Form Data
@@ -592,7 +597,7 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             const particles = [];
-            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ffffff'];
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#18181b']; // Added dark color for light theme fireworks
             function createFirework() {
                 const x = Math.random() * canvas.width;
                 const y = Math.random() * canvas.height / 2;
@@ -604,7 +609,8 @@
             const burstInterval = setInterval(() => { createFirework(); bursts++; if(bursts > 10) clearInterval(burstInterval); }, 500);
             createFirework();
             function animate() {
-                ctx.fillStyle = 'rgba(9, 9, 11, 0.2)';
+                // Fade out with light background color
+                ctx.fillStyle = 'rgba(250, 250, 250, 0.2)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 for (let i = particles.length - 1; i >= 0; i--) {
                     const p = particles[i];
