@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iPhone Collector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <style>
+        /* --- CORE ANIMATIONS --- */
+        @keyframes appear {
+            0% { opacity: 0; transform: scale(0.9) translateY(20px); filter: blur(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.15); }
+        }
+        
+        @keyframes btn-pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.2); transform: scale(1); }
+            50% { box-shadow: 0 0 40px rgba(255,255,255,0.5); transform: scale(1.03); }
+        }
+
+        @keyframes check-draw {
+            0% { stroke-dasharray: 100; stroke-dashoffset: 100; }
+            100% { stroke-dashoffset: 0; }
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        /* Transition Animations */
+        @keyframes bounce-out {
+            0% { transform: scale(1); opacity: 1; }
+            40% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        @keyframes bounce-in {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* --- CINEMATIC PARTICLE SYSTEM --- */
+        @keyframes particle-x { to { transform: translateX(var(--tx)); } }
+        @keyframes particle-y { to { transform: translateY(var(--ty)); } }
+        @keyframes particle-life {
+            0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            10% { opacity: 1; transform: scale(1.2) rotate(var(--rot)); }
+            80% { opacity: 1; transform: scale(0.8) rotate(calc(var(--rot) * 2)); }
+            100% { opacity: 0; transform: scale(0.1) rotate(calc(var(--rot) * 3)); }
+        }
+
+        .p-wrap { position: absolute; pointer-events: none; z-index: 50; animation: particle-x var(--dur) cubic-bezier(0.215, 0.610, 0.355, 1.000) forwards; }
+        .p-inner { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; animation: particle-y var(--dur) cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards; }
+        .p-shape { animation: particle-life var(--dur) linear forwards; filter: drop-shadow(0 0 6px currentColor); }
+
+        /* --- UTILITIES --- */
+        .animate-appear { animation: appear 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
+        .animate-btn-pulse { animation: btn-pulse-glow 2s ease-in-out infinite; }
+        .animate-bounce-out { animation: bounce-out 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .check-path { stroke-dasharray: 100; stroke-dashoffset: 100; animation: check-draw 0.6s 0.2s cubic-bezier(0.65, 0, 0.45, 1) forwards; }
+        
+        .view-section { transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); position: absolute; inset: 0; width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; }
+        .view-hidden { opacity: 0; pointer-events: none; transform: scale(0.95); z-index: 0; }
+        .view-active { opacity: 1; pointer-events: auto; transform: scale(1); z-index: 10; }
+
+        body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        
+        /* Map Styles */
+        #map-container { z-index: 1; }
+        .leaflet-pane { z-index: 10 !important; }
+        .leaflet-control-container { display: none; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white font-sans selection:bg-white/20 h-[100dvh] w-full overflow-hidden relative">
+
+    <div id="bg-gradient" class="fixed inset-0 bg-gradient-to-b opacity-40 transition-colors duration-1000 pointer-events-none from-blue-600/20 to-purple-600/20"></div>
+    <div class="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none mix-blend-overlay"></div>
+    <div class="fixed inset-0 bg-zinc-950/20 pointer-events-none z-0"></div>
+
+    <!-- ================= VIEW 1: GAME ================= -->
+    <div id="view-game" class="view-section view-active flex flex-col items-center justify-between p-6 max-w-lg mx-auto h-[100dvh]">
+        
+        <div id="particles-container" class="absolute inset-0 pointer-events-none z-50 overflow-hidden"></div>
+
+        <!-- TOP: Status -->
+        <div class="w-full flex flex-col items-center space-y-3 pt-safe relative z-10">
+            <div class="flex justify-between w-full text-[10px] sm:text-xs font-bold tracking-[0.2em] text-zinc-500 uppercase">
+                <span id="gen-label">Gen 1</span>
+                <!-- Percentage moved inside bar for better visibility -->
+            </div>
+            
+            <!-- Bigger, More Visible Progress Bar -->
+            <div class="w-full h-7 bg-zinc-800/80 rounded-xl overflow-hidden backdrop-blur-md border border-white/20 shadow-lg relative">
+                <div id="progress-bar" class="h-full bg-blue-500 shadow-[0_0_20px_currentColor] transition-all duration-300 ease-out flex items-center justify-end pr-2" style="width: 0%">
+                </div>
+                 <!-- Centered Text Overlay -->
+                 <span id="percent-label" class="absolute inset-0 flex items-center justify-center text-xs font-bold tracking-widest text-white drop-shadow-md z-10">0% SYNCED</span>
+            </div>
+            
+            <!-- TITLE REMOVED HERE -->
+        </div>
+
+        <!-- MIDDLE: Phone Hero -->
+        <div class="flex-1 flex items-center justify-center w-full relative group perspective-1000 py-4">
+            <div id="phone-glow" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] animate-pulse-glow transition-all duration-1000"
+                 style="background: radial-gradient(circle closest-side, rgba(59, 130, 246, 0.4) 0%, transparent 100%);">
+            </div>
+            <div id="phone-container" class="relative transition-all duration-700 ease-spring z-20">
+                <img id="phone-img" src="https://i.ibb.co/27TwCXLY/17-air-black.png" alt="iPhone" class="h-[45vh] max-h-[500px] object-contain drop-shadow-2xl will-change-transform">
+            </div>
+        </div>
+
+        <!-- BOTTOM: Controls -->
+        <div class="w-full flex flex-col items-center gap-12 pb-safe z-30">
+            
+            <div id="click-area" class="relative group transition-all duration-300 mt-4">
+                <div id="click-ripple" class="absolute inset-0 rounded-full border border-white/40 hidden pointer-events-none"></div>
+                <button id="apple-btn" class="relative z-20 w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-full backdrop-blur-xl border border-white/10 transition-all duration-150 active:scale-95 shadow-[0_0_60px_-10px_rgba(255,255,255,0.05)] outline-none touch-manipulation overflow-hidden">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Tap" class="h-10 w-auto object-contain invert opacity-90 pointer-events-none select-none">
+                </button>
+            </div>
+
+            <button id="collect-btn" class="w-full py-4 px-6 rounded-2xl font-bold text-sm tracking-[0.15em] uppercase transition-all duration-500 flex items-center justify-center gap-3 bg-zinc-900/80 backdrop-blur-md text-zinc-300 border border-zinc-800 hover:bg-white hover:text-black hover:scale-[1.02] shadow-lg hover:shadow-white/20 group overflow-hidden relative">
+                <span class="relative z-10 flex items-center gap-2">
+                    <span>Collect Now</span>
+                    <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </span>
+                <div id="collect-shine" class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= VIEW 2: SHIPPING FORM ================= -->
+    <div id="view-form" class="view-section view-hidden bg-zinc-950 flex flex-col h-[100dvh]">
+        <div class="px-6 py-6 flex items-center justify-between bg-zinc-900/50 backdrop-blur-xl border-b border-white/5 z-20">
+            <button id="back-btn" class="text-zinc-400 hover:text-white transition-colors flex items-center gap-2 text-sm font-medium">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                Back
+            </button>
+            <span class="text-sm font-bold tracking-widest uppercase text-white/80">Details</span>
+            <div class="w-16"></div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-8 max-w-lg mx-auto w-full relative z-10">
+            <div class="space-y-2 text-center animate-appear">
+                <h2 class="text-2xl font-bold text-white">Where should we send it?</h2>
+                <p class="text-zinc-500 text-sm">Enter your details to claim your device.</p>
+            </div>
+            <div class="space-y-2 animate-appear" style="animation-delay: 0.1s">
+                <label class="text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">Full Name</label>
+                <!-- Changed text-sm to text-base to prevent iOS zoom on focus -->
+                <input type="text" id="input-name" placeholder="John Appleseed" class="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-base font-medium">
+            </div>
+            <div class="space-y-2 animate-appear" style="animation-delay: 0.2s">
+                <label class="text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">Delivery Location</label>
+                <p class="text-[10px] text-zinc-600 ml-1 mb-2">Tap the map to place a pin.</p>
+                <div id="map-container" class="w-full h-64 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden relative group hover:border-zinc-700 transition-colors"></div>
+            </div>
+            <button id="confirm-order-btn" class="w-full py-5 rounded-2xl font-bold text-sm tracking-widest uppercase bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_30px_rgba(37,99,235,0.3)] transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed animate-appear" style="animation-delay: 0.3s">
+                Confirm Delivery
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= VIEW 3: SUCCESS ================= -->
+    <div id="view-success" class="view-section view-hidden flex flex-col items-center justify-center p-6 bg-zinc-950 z-50">
+        <canvas id="fireworks" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+        <div class="relative z-10 flex flex-col items-center text-center space-y-8 max-w-sm">
+            <div class="relative">
+                <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-green-500 to-emerald-400 blur-2xl absolute inset-0 opacity-40 animate-pulse"></div>
+                <div class="w-24 h-24 rounded-full bg-zinc-900 border border-green-500/30 flex items-center justify-center relative shadow-2xl">
+                    <svg class="w-10 h-10 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline class="check-path" points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <h2 class="text-3xl font-black text-white tracking-tight">Order Confirmed</h2>
+                <p class="text-zinc-400 text-sm">Your <span id="final-device-name" class="text-green-400 font-bold">iPhone</span> is reserved.</p>
+            </div>
+            <div class="w-full bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-2xl p-6 space-y-2">
+                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Delivery Estimate</p>
+                <div id="countdown" class="text-4xl font-mono font-bold text-white tabular-nums tracking-tighter">
+                    02:00:00
+                </div>
+                <p class="text-xs text-zinc-600">Our courier is en route to the pin location.</p>
+            </div>
+            <button id="play-again-btn" class="text-zinc-500 hover:text-white text-xs uppercase tracking-widest mt-8 transition-colors">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const phones = [
+            {
+                name: "iPhone 17 Air",
+                img: "https://i.ibb.co/27TwCXLY/17-air-black.png",
+                gradient: "from-blue-600/20 to-cyan-500/20",
+                glowColor: "rgba(59, 130, 246, 0.4)",
+                bar: "bg-blue-500",
+                particle: "text-blue-400"
+            },
+            {
+                name: "iPhone 17 Pro",
+                img: "https://i.ibb.co/xKWg0R27/17pro-Sage-1.png",
+                gradient: "from-emerald-600/20 to-teal-600/20",
+                glowColor: "rgba(16, 185, 129, 0.4)",
+                bar: "bg-emerald-500",
+                particle: "text-emerald-400"
+            },
+            {
+                name: "iPhone 17 Pro Max",
+                img: "https://i.ibb.co/0y4ZVXQD/17pro-Max-Cosmic-Orange-1.png",
+                gradient: "from-orange-600/20 to-amber-600/20",
+                glowColor: "rgba(249, 115, 22, 0.4)",
+                bar: "bg-orange-500",
+                particle: "text-orange-400"
+            }
+        ];
+
+        let state = {
+            level: 0,
+            progress: 0,
+            isTransitioning: false,
+            isMaxedOut: false,
+            currentView: 'game',
+            activeParticles: 0 // Track active particles
+        };
+
+        let map = null;
+        let mapPin = null;
+        let countdownInterval = null; // Store interval ID
+
+        const DOM = {
+            views: {
+                game: document.getElementById('view-game'),
+                form: document.getElementById('view-form'),
+                success: document.getElementById('view-success')
+            },
+            game: {
+                gen: document.getElementById('gen-label'),
+                percent: document.getElementById('percent-label'),
+                bar: document.getElementById('progress-bar'),
+                // Name element removed
+                img: document.getElementById('phone-img'),
+                glow: document.getElementById('phone-glow'),
+                bg: document.getElementById('bg-gradient'),
+                particles: document.getElementById('particles-container'),
+                tapArea: document.getElementById('click-area'),
+                appleBtn: document.getElementById('apple-btn'),
+                collectBtn: document.getElementById('collect-btn')
+            },
+            form: {
+                backBtn: document.getElementById('back-btn'),
+                confirmBtn: document.getElementById('confirm-order-btn'),
+                nameInput: document.getElementById('input-name')
+            },
+            success: {
+                deviceName: document.getElementById('final-device-name'),
+                timer: document.getElementById('countdown'),
+                playAgainBtn: document.getElementById('play-again-btn') // Add reference
+            }
+        };
+
+        function switchView(viewName) {
+            Object.values(DOM.views).forEach(el => {
+                el.classList.remove('view-active');
+                el.classList.add('view-hidden');
+            });
+            DOM.views[viewName].classList.remove('view-hidden');
+            DOM.views[viewName].classList.add('view-active');
+            state.currentView = viewName;
+
+            if (viewName === 'form' && !map) {
+                setTimeout(initMap, 300);
+            }
+        }
+
+        function initMap() {
+            map = L.map('map-container').setView([34.0522, -118.2437], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            map.on('click', function(e) {
+                if (mapPin) mapPin.setLatLng(e.latlng);
+                else mapPin = L.marker(e.latlng).addTo(map);
+            });
+            map.invalidateSize();
+        }
+
+        function updateVisuals() {
+            const p = phones[state.level];
+            DOM.game.gen.textContent = `GEN ${state.level + 1}`;
+            DOM.game.percent.textContent = `${Math.floor(state.progress)}% SYNCED`;
+            DOM.game.bar.style.width = `${state.progress}%`;
+            DOM.game.bg.className = `fixed inset-0 bg-gradient-to-b opacity-40 transition-colors duration-1000 pointer-events-none ${p.gradient}`;
+            DOM.game.glow.style.background = `radial-gradient(circle closest-side, ${p.glowColor} 0%, transparent 100%)`;
+            DOM.game.bar.className = `h-full shadow-[0_0_15px_currentColor] transition-all duration-300 ease-out flex items-center justify-end pr-2 ${p.bar}`;
+        }
+
+        // New function to check if transition should happen
+        function checkTransition() {
+            // Only transition if bar is full AND no particles are actively flying
+            if (state.progress >= 99.9 && state.activeParticles === 0 && !state.isTransitioning && !state.isMaxedOut) {
+                handleLevelUp();
+            }
+        }
+
+        function spawnParticles(startX, startY, count = 20, isGameplay = true) {
+            const p = phones[state.level];
+            const phoneRect = DOM.game.img.getBoundingClientRect();
+            const targetX = phoneRect.left + phoneRect.width / 2;
+            const targetY = phoneRect.top + phoneRect.height / 2;
+            const totalClickProgress = 10;
+            const progressPerParticle = totalClickProgress / count;
+
+            for (let i = 0; i < count; i++) {
+                const isLogo = Math.random() > 0.6;
+                const wrapper = document.createElement('div');
+                const inner = document.createElement('div');
+                const shape = document.createElement('div');
+
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 120;
+                const spreadX = Math.cos(angle) * radius;
+                const spreadY = Math.sin(angle) * radius;
+                const actualStartX = startX + spreadX;
+                const actualStartY = startY + spreadY;
+                const tx = targetX - actualStartX;
+                const ty = targetY - actualStartY;
+
+                wrapper.className = `p-wrap`;
+                inner.className = `p-inner`;
+                shape.className = `p-shape ${p.particle}`;
+
+                wrapper.style.left = `${actualStartX}px`;
+                wrapper.style.top = `${actualStartY}px`;
+                wrapper.style.setProperty('--tx', `${tx}px`);
+                inner.style.setProperty('--ty', `${ty}px`);
+                
+                const duration = 0.8 + Math.random() * 0.4;
+                wrapper.style.setProperty('--dur', `${duration}s`);
+                shape.style.color = p.glowColor;
+                shape.style.setProperty('--rot', `${Math.random() * 360}deg`);
+
+                if (isLogo) {
+                    shape.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.68-.83 1.14-1.99 1.01-3.15-1.05.05-2.32.7-3.07 1.57-.65.76-1.22 1.98-1.06 3.11 1.17.09 2.37-.59 3.12-1.53z"/></svg>`;
+                } else {
+                    shape.innerHTML = `<div class="w-3 h-3 rounded-full bg-white shadow-[0_0_10px_currentColor]"></div>`;
+                }
+
+                inner.appendChild(shape);
+                wrapper.appendChild(inner);
+                DOM.game.particles.appendChild(wrapper);
+
+                // Track active particles for gameplay interactions
+                if (isGameplay) state.activeParticles++;
+
+                setTimeout(() => {
+                    if (isGameplay) {
+                        incrementProgress(progressPerParticle);
+                        state.activeParticles--;
+                        checkTransition(); // Check if this was the last particle needed
+                    }
+                    wrapper.remove();
+                }, duration * 1000);
+            }
+        }
+
+        function incrementProgress(amount) {
+            if (state.isTransitioning || state.isMaxedOut) return;
+            
+            state.progress = Math.min(state.progress + amount, 100);
+            updateVisuals();
+            // Note: handleLevelUp is NOT called here anymore, but in checkTransition
+        }
+
+        function handleLevelUp() {
+            if (state.isTransitioning) return;
+            state.isTransitioning = true;
+            
+            DOM.game.tapArea.classList.add('opacity-50', 'pointer-events-none');
+            
+            setTimeout(() => {
+                if (state.level >= phones.length - 1) {
+                    state.level = phones.length - 1;
+                    state.progress = 100;
+                    state.isMaxedOut = true;
+                    
+                    const rect = DOM.game.img.getBoundingClientRect();
+                    spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, 40, false);
+                    activateMaxMode();
+                } else {
+                    DOM.game.img.classList.add('animate-bounce-out');
+                    const rect = DOM.game.img.getBoundingClientRect();
+                    // VFX particles (isGameplay = false)
+                    spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, 20, false);
+
+                    setTimeout(() => {
+                        DOM.game.img.style.opacity = '0'; 
+                        state.level++;
+                        state.progress = 0;
+                        DOM.game.img.src = phones[state.level].img;
+                        // Name update removed from here
+                        updateVisuals();
+                        
+                        DOM.game.img.classList.remove('animate-bounce-out');
+                        DOM.game.img.classList.add('animate-bounce-in');
+                        
+                        requestAnimationFrame(() => {
+                            DOM.game.img.style.opacity = '1'; 
+                        });
+
+                        setTimeout(() => {
+                            DOM.game.img.classList.remove('animate-bounce-in');
+                            state.isTransitioning = false;
+                            DOM.game.tapArea.classList.remove('opacity-50', 'pointer-events-none');
+                        }, 600);
+                    }, 480);
+                }
+            }, 300);
+        }
+
+        function activateMaxMode() {
+            // Apply smoother transition for the disappearance
+            DOM.game.tapArea.style.transition = 'all 1s cubic-bezier(0.4, 0, 0.2, 1)';
+            
+            // Fade out, scale down, and collapse space simultaneously
+            DOM.game.tapArea.style.opacity = '0';
+            DOM.game.tapArea.style.transform = 'scale(0)';
+            DOM.game.tapArea.style.pointerEvents = 'none';
+            DOM.game.tapArea.style.height = '0';
+            DOM.game.tapArea.style.marginTop = '0';
+            DOM.game.tapArea.style.overflow = 'hidden';
+
+            DOM.game.collectBtn.classList.remove('bg-zinc-900/80', 'text-zinc-300', 'border-zinc-800');
+            DOM.game.collectBtn.classList.add('bg-white', 'text-black', 'animate-btn-pulse', 'border-transparent', 'shadow-[0_0_40px_rgba(255,255,255,0.3)]');
+            
+            // Changed "CLAIM" to "TAKE"
+            DOM.game.collectBtn.innerHTML = `
+                <span class="relative z-10 flex items-center gap-2 font-black tracking-widest text-base">
+                    <span>TAKE IPHONE 17 PRO MAX</span>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </span>
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-zinc-400/40 to-transparent -translate-x-full animate-[shimmer_2s_infinite] pointer-events-none"></div>
+            `;
+            
+            DOM.game.gen.textContent = "MAX LEVEL";
+            DOM.game.percent.textContent = "READY FOR COLLECTION";
+        }
+
+        DOM.game.appleBtn.addEventListener('mousedown', handleTap);
+        DOM.game.appleBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap(e); });
+
+        function handleTap(e) {
+            // Prevent tapping if transitioning, maxed out, OR if bar is effectively full
+            if (state.isTransitioning || state.isMaxedOut || state.progress >= 100) return;
+            
+            let x, y;
+            if (e.type === 'touchstart') {
+                x = e.touches[0].clientX;
+                y = e.touches[0].clientY;
+            } else {
+                x = e.clientX;
+                y = e.clientY;
+            }
+
+            spawnParticles(x, y, 20, true);
+            const btn = DOM.game.appleBtn;
+            btn.style.transform = 'scale(0.92)';
+            setTimeout(() => btn.style.transform = 'scale(1)', 100);
+        }
+
+        DOM.game.collectBtn.addEventListener('click', () => { switchView('form'); });
+        DOM.form.backBtn.addEventListener('click', () => { switchView('game'); });
+
+        DOM.form.confirmBtn.addEventListener('click', () => {
+            if (!DOM.form.nameInput.value) {
+                DOM.form.nameInput.focus();
+                DOM.form.nameInput.classList.add('ring-2', 'ring-red-500');
+                setTimeout(() => DOM.form.nameInput.classList.remove('ring-2', 'ring-red-500'), 500);
+                return;
+            }
+            DOM.success.deviceName.textContent = phones[state.level].name;
+            switchView('success');
+            startCountdown();
+            launchFireworks();
+        });
+
+        // Add Play Again Handler
+        DOM.success.playAgainBtn.addEventListener('click', resetGame);
+
+        function resetGame() {
+            // 1. Reset State
+            state = {
+                level: 0,
+                progress: 0,
+                isTransitioning: false,
+                isMaxedOut: false,
+                currentView: 'game',
+                activeParticles: 0
+            };
+
+            // 2. Reset Visuals (Image, Text, Bar)
+            DOM.game.img.src = phones[0].img;
+            DOM.game.img.classList.remove('animate-bounce-out', 'animate-bounce-in');
+            DOM.game.img.style.opacity = '1';
+            updateVisuals();
+
+            // 3. Reset Tap Area (Revert Max Mode styles)
+            // Remove the custom transition we added in activateMaxMode so it reverts to CSS class
+            DOM.game.tapArea.style.removeProperty('transition');
+            DOM.game.tapArea.style.removeProperty('transform');
+            
+            DOM.game.tapArea.style.opacity = '1';
+            DOM.game.tapArea.style.pointerEvents = 'auto';
+            DOM.game.tapArea.style.removeProperty('height');
+            DOM.game.tapArea.style.removeProperty('margin-top');
+            DOM.game.tapArea.style.removeProperty('overflow');
+            DOM.game.tapArea.classList.remove('opacity-50', 'pointer-events-none');
+
+            // 4. Reset Collect Button (Revert Max Mode styles)
+            DOM.game.collectBtn.className = "w-full py-4 px-6 rounded-2xl font-bold text-sm tracking-[0.15em] uppercase transition-all duration-500 flex items-center justify-center gap-3 bg-zinc-900/80 backdrop-blur-md text-zinc-300 border border-zinc-800 hover:bg-white hover:text-black hover:scale-[1.02] shadow-lg hover:shadow-white/20 group overflow-hidden relative";
+            DOM.game.collectBtn.innerHTML = `
+                <span class="relative z-10 flex items-center gap-2">
+                    <span>Collect Now</span>
+                    <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </span>
+                <div id="collect-shine" class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+            `;
+
+            // 5. Reset Form Data
+            DOM.form.nameInput.value = '';
+            if (mapPin) {
+                mapPin.remove();
+                mapPin = null;
+            }
+            if (map) {
+                map.setView([34.0522, -118.2437], 13);
+            }
+
+            // 6. Stop timers
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            // 7. Go to Game
+            switchView('game');
+        }
+
+        function startCountdown() {
+            if (countdownInterval) clearInterval(countdownInterval); // Clear existing
+            
+            let duration = 7200;
+            const timerEl = DOM.success.timer;
+            
+            // Initial render
+            updateTimerDisplay(duration, timerEl);
+
+            countdownInterval = setInterval(() => {
+                duration--;
+                updateTimerDisplay(duration, timerEl);
+                if (duration < 0) clearInterval(countdownInterval);
+            }, 1000);
+        }
+
+        function updateTimerDisplay(seconds, el) {
+            if (seconds < 0) seconds = 0;
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            el.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function launchFireworks() {
+            const canvas = document.getElementById('fireworks');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const particles = [];
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ffffff'];
+            function createFirework() {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height / 2;
+                for (let i = 0; i < 50; i++) {
+                    particles.push({x, y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8, alpha: 1, color: colors[Math.floor(Math.random() * colors.length)]});
+                }
+            }
+            let bursts = 0;
+            const burstInterval = setInterval(() => { createFirework(); bursts++; if(bursts > 10) clearInterval(burstInterval); }, 500);
+            createFirework();
+            function animate() {
+                ctx.fillStyle = 'rgba(9, 9, 11, 0.2)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.alpha -= 0.01;
+                    ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
+                    if (p.alpha <= 0) particles.splice(i, 1);
+                }
+                if(state.currentView === 'success') requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        updateVisuals();
+    </script>
+</body>
+</html>
